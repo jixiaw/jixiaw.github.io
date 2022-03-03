@@ -6,16 +6,21 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="http://jixiaw.github.io">
-  <title>Archives: 2020 | jxw&#39;s Blog</title>
+  <title>Raft学习笔记 | jxw&#39;s Blog</title>
   <meta name="generator" content="hexo-theme-yilia-plus">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   
-  <meta property="og:type" content="website">
-<meta property="og:title" content="jxw&#39;s Blog">
-<meta property="og:url" content="http://jixiaw.github.io/archives/2020/index.html">
+  <meta name="description" content="记录一些Raft的学习笔记">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raft学习笔记">
+<meta property="og:url" content="http://jixiaw.github.io/2022/03/02/raft/index.html">
 <meta property="og:site_name" content="jxw&#39;s Blog">
+<meta property="og:description" content="记录一些Raft的学习笔记">
 <meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-03-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-03-03T11:33:59.184Z">
 <meta property="article:author" content="JiXiaw">
+<meta property="article:tag" content="操作系统">
 <meta name="twitter:card" content="summary">
   
     <link rel="alternative" href="/atom.xml" title="jxw&#39;s Blog" type="application/atom+xml">
@@ -165,366 +170,282 @@
               class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-  
+            <article id="post-raft" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
     
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2020" class="archive-year">2020</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/11/20/digitofnum/" class="archive-article-date">
-        <time datetime="2020-11-19T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-11-20</time>
-</a>
-
-        </div>
-    	 
+      <header class="article-header">
   
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/11/20/digitofnum/" target="_blank">c++计算十进制数的位数</a>
   
+    <h1 class="article-title" itemprop="name">
+      Raft学习笔记
     </h1>
   
 
 
-        <div class="article-info info-on-right">
+  
+  
+        
+        <span id="busuanzi_container_page_pv" style='display:none' class="archive-article-date">
+              <i class="icon-smile icon"></i> 阅读数：<span id="busuanzi_value_page_pv"></span>次
+        </span>
+
+<a href="/2022/03/02/raft/" class="archive-article-date">
+        <time datetime="2022-03-01T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2022-03-02</time>
+</a>
+
+  
+  
+    
+<div style="margin-top:10px;">
+  <span class="post-time">
+    <span class="post-meta-item-icon">
+      <!-- fonts.scss -->
+      <!-- 百度字体平台:http://fontstore.baidu.com/static/editor/index.html -->
+      <i class="icon-statistics"></i>
+      <span class="post-meta-item-text"> 字数统计:</span>
+      <span class="post-count">1.3k字</span>
+    </span>
+  </span>
+
+  <span class="post-time">
+    &nbsp; | &nbsp;
+    <span class="post-meta-item-icon">
+      <i class="icon-book icon"></i>
+      <span class="post-meta-item-text"> 阅读时长≈</span>
+      <span class="post-count">4分</span>
+    </span>
+  </span>
+</div>
+
+
+  
+  </header>
+  
+  <div class="article-entry" itemprop="articleBody">
+    
+    <p>记录一些Raft的学习笔记</p>
+<a id="more"></a>
+
+<h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1.前言"></a>1.前言</h1><h2 id="1-1-一致性算法"><a href="#1-1-一致性算法" class="headerlink" title="1.1 一致性算法"></a>1.1 一致性算法</h2><p>一致性算法能够允许多台机器作为一个集群协同工作，并且在其中某几台机器故障时整个集群仍能正常工作。</p>
+<p>一致性算法的工作就是保证每台服务器最终复制状态机的一致性，日志记录了状态机的命令，即也就是保证复制日志的一致性。只需要确保每台服务器中的日志最终包含相同顺序的命令，那么每台服务器上的状态机可以按日志顺序处理命令，达到了复制状态机的目的。形成了高可用的复制状态机。</p>
+<p>一致性算法通常需要以下属性：</p>
+<ul>
+<li>确保在非拜占庭条件下(包括网络延迟、数据包丢失、重复、乱序等)的安全性(不会返回不正确的结果)。</li>
+<li>只要任何大多数(超过半数)服务器可以正常运行，一致性算法就可用。</li>
+<li>不依赖于时序来确保日志的一致性：时钟错误或延迟会导致可用性。意思是不需要现实中的时间，如Raft是通过递增的任期数来作为逻辑时间。</li>
+<li>通常情况下，只要集群的大部分(过半)已经响应的RPC，命令就能完成；少数较慢的服务器不会影响整个系统性能。</li>
+</ul>
+<h2 id="1-2-Paxos"><a href="#1-2-Paxos" class="headerlink" title="1.2 Paxos"></a>1.2 Paxos</h2><p>Paxos存在以下两个问题：</p>
+<ul>
+<li>非常难以理解。《The Part-time Parliament》⽐较晦涩难懂，但是《Paxos Made Simple》就⽐较容易理解。</li>
+<li>难以构建实际的系统。因为缺乏很多细节，实际会有很多难题，导致最终实现等系统和Paxos有很大的差异，相当于是另一个协议了。</li>
+</ul>
+<h2 id="1-3-Raft设计目标"><a href="#1-3-Raft设计目标" class="headerlink" title="1.3 Raft设计目标"></a>1.3 Raft设计目标</h2><ul>
+<li>可理解性</li>
+<li>提供一个完整的实际系统实现基础</li>
+<li>在任何情况下都是安全的并且在典型的应⽤条件下是可⽤的</li>
+<li>在正常情况下是⾼效的</li>
+</ul>
+<h1 id="2-Raft"><a href="#2-Raft" class="headerlink" title="2.Raft"></a>2.Raft</h1><p>raft将一致性问题分为了三个相对独立的问题：</p>
+<ul>
+<li>leader选举: 当前leader宕机时，会有新的leader选举产生</li>
+<li>日志复制: leader必须从客户端接收日志条目然后复制到其他服务器节点，并且强制要求其他节点的日志与leader保持一致</li>
+<li>安全性: 如果有任何的服务器节点已经应⽤了⼀个特定的⽇志条⽬到它的状态机中，那么其他服务器节点不能在同⼀个⽇志索引位置应⽤⼀条不同的指令</li>
+</ul>
+<h2 id="2-1-Leader选举"><a href="#2-1-Leader选举" class="headerlink" title="2.1 Leader选举"></a>2.1 Leader选举</h2><p><strong>选举时机</strong>：followers在一定时间内没有收到AppendEntries的RPC或者发起投票的RPC，即超时就会转为candidate进行选举</p>
+<p><strong>选举时做什么</strong><br>candidate：</p>
+<ul>
+<li>增加当前轮次 term</li>
+<li>给自己投票</li>
+<li>重置选举定时器</li>
+<li>给所有服务器发送 RequestVote RPC</li>
+</ul>
+<p>follower: 按照先来后到只给一个candidate投票(安全性里还会有限制补充)</p>
+<p><strong>candidate会出现三种情况</strong></p>
+<ul>
+<li>获得了过半的投票，赢得选举成为leader，之后发送心跳信息防止新的选举。</li>
+<li>收到另一个自称是leader的消息，若它的任期号不小于本candidate任期号，则承认该leader变成follower；反之拒绝这个RPC，继续保持candidate。</li>
+<li>选票被分流，选举既没有赢也没有输，超时后增加任期号开始新一轮的选举，超时时间在一个区域内随机选择，避免无限重复。</li>
+</ul>
+<h2 id="2-2-日志复制"><a href="#2-2-日志复制" class="headerlink" title="2.2 日志复制"></a>2.2 日志复制</h2><p><strong>日志匹配特性</strong></p>
+<ul>
+<li>如果不同⽇志中的两个条⽬拥有相同的索引和任期号，那么他们存储了相同的指令。</li>
+<li>如果不同⽇志中的两个条⽬拥有相同的索引和任期号，那么他们之前的所有⽇志条⽬也都相同。</li>
+</ul>
+<p><strong>复制规则</strong></p>
+<p>leader会强制follower的日志跟自己的保持一致，follower中跟leader冲突的日志会被leader的日志覆盖。</p>
+<p>leader会找到与follower达成一致的最大日志条目索引，删除follower中那个点之后的所有日志，并将leader中那个点之后的所有日志条目发送给follower。</p>
+<p>leader针对每个follower维护一个nextIndex，表示要发送的下一个日志条目索引，leader发送nextIndex失败时会减小nextIndex继续发送，直到日志达成一致的位置。</p>
+<h2 id="2-3-安全性"><a href="#2-3-安全性" class="headerlink" title="2.3 安全性"></a>2.3 安全性</h2><p><strong>选举限制</strong><br>candidate发送RequestVote RPC中包含了自己的日志信息，如果投票者的日志比这个candidate的日志还新，就会拒绝该投票请求。<br>Raft 通过⽐较两份⽇志中最后⼀条⽇志条⽬的索引值和任期号来定义谁的⽇志⽐较新。如果两份⽇志最后条⽬的任期号不同，那么任期号⼤的⽇志更新。如果两份⽇志最后条⽬的任期号相同，那么⽇志较⻓的那个更新。</p>
+<h2 id="2-4-定时"><a href="#2-4-定时" class="headerlink" title="2.4 定时"></a>2.4 定时</h2><p>⼴播时间（broadcastTime） &lt;&lt; 选举超时时间（electionTimeout） &lt;&lt; 平均故障间隔时间（MTBF）</p>
+<h1 id="3-集群成员变更"><a href="#3-集群成员变更" class="headerlink" title="3 集群成员变更"></a>3 集群成员变更</h1><h1 id="4-日志压缩"><a href="#4-日志压缩" class="headerlink" title="4 日志压缩"></a>4 日志压缩</h1><p>当日志达到一定大小时，使用快照技术压缩日志</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>[1]Ongaro D, Ousterhout J. In search of an understandable consensus algorithm[C]//2014 USENIX Annual Technical Conference (Usenix ATC 14). 2014: 305-319.</p>
+
+    
+
+    
+
+    
+    <div class="declare"> 
+      <ul class="post-copyright">
+        <li>
+          <strong>本文作者：</strong>
+          JiXiaw
+        </li>
+        <li>
+          <strong>本文链接：</strong>
+          <a href="http://jixiaw.github.io/2022/03/02/raft/" title="Raft学习笔记" target="_blank">http://jixiaw.github.io/2022/03/02/raft/</a>
+        </li>
+        
+        <li>
+          <strong>版权声明： </strong>
           
+          本博客所有文章除特别声明外，均采用 <a href="https://github.com/JoeyBling/hexo-theme-yilia-plus/blob/master/LICENSE" rel="external nofollow" target="_blank">MIT</a> 许可协议。转载请注明出处！
+        </li>
+        
+      </ul>
+    </div>
+    
+
+  </div>
+  <div class="article-info article-info-index">
+    
+    
 	<div class="article-tag tagcloud">
 		<i class="icon-price-tags icon"></i>
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">c++</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">操作系统</a>
         		</li>
       		
 		</ul>
 	</div>
 
-          
+    
 
+    
+
+    
+    
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <!-- <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a> -->
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+     <!-- <img src="//pan.baidu.com/share/qrcode?url=http://jixiaw.github.io/2022/03/02/raft/" alt="微信分享二维码"> -->
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+
+    
+    <div class="clearfix"></div>
+  </div>
   </div>
 </article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/10/17/vimdiff/" class="archive-article-date">
-        <time datetime="2020-10-16T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-10-17</time>
-</a>
 
+
+<nav id="article-nav">
+  
+  
+    <a href="/2021/09/28/job/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">秋招的一些总结和感想</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/10/17/vimdiff/" target="_blank">vimdiff以及vim的一个bug</a>
-  
-    </h1>
-  
+        
+        
+    </div>
+</aside>
 
 
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">linux</a>
-        		</li>
-      		
-		</ul>
-	</div>
 
-          
 
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/10/03/git/" class="archive-article-date">
-        <time datetime="2020-10-02T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-10-03</time>
-</a>
 
-        </div>
-    	 
+
+
+
+
+
+
   
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/10/03/git/" target="_blank">git 基本操作及开发流程</a>
+  <div id="gitment-ctn"></div>
   
-    </h1>
+    <!-- 中文 -->
+    <link rel="stylesheet" href="/lib/gitment.css">
+    <script src="/lib/gitment.js"></script>
+  
+  <script>
+    <!-- id: "Raft学习笔记" -->
+    var gitment = new Gitment({
+      id: "20220302000000",
+      owner: 'jixiaw',
+      repo: 'yilia-plus-demo',
+      oauth: {
+        client_id: '1062039060f4021e8ae2',
+        client_secret: '6ffbfcbd49ef5b123d524664657145a662179f34',
+      },
+    })
+    gitment.render('gitment-ctn')
+  </script>
+
+
   
 
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color4">git</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/09/09/interview/" class="archive-article-date">
-        <time datetime="2020-09-08T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-09-09</time>
-</a>
-
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/09/09/interview/" target="_blank">面试总结</a>
-  
-    </h1>
-  
-
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">经验</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/08/29/mod/" class="archive-article-date">
-        <time datetime="2020-08-28T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-08-29</time>
-</a>
-
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/08/29/mod/" target="_blank">分数取模</a>
-  
-    </h1>
-  
-
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">算法</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/08/21/linux/" class="archive-article-date">
-        <time datetime="2020-08-20T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-08-21</time>
-</a>
-
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/08/21/linux/" target="_blank">Linux 命令整理</a>
-  
-    </h1>
-  
-
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">Linux</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/08/19/first_blog/" class="archive-article-date">
-        <time datetime="2020-08-18T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-08-19</time>
-</a>
-
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/08/19/first_blog/" target="_blank">Hexo搭建博客</a>
-  
-    </h1>
-  
-
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">hexo</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	
-<a href="/2020/08/19/ubuntu_install/" class="archive-article-date">
-        <time datetime="2020-08-18T16:00:00.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-08-19</time>
-</a>
-
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-	
-	  <a class="archive-article-title" href="/2020/08/19/ubuntu_install/" target="_blank">安装 Ubuntu 、win10 双系统</a>
-  
-    </h1>
-  
-
-
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">Linux</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-    
 
 
           </div>
@@ -565,8 +486,8 @@
 	var yiliaConfig = {
 		mathjax: true,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: true,
